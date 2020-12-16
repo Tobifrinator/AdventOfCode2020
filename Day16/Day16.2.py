@@ -13,7 +13,7 @@ def remove_flawed_tickets(nearby_tickets, valid_values):
 	return valid_tickets
 
 
-#convert the rules in a better to use form using a dictionary
+#convert the rules in a better to use format using a dictionary
 def create_rules_dict(ticket_rules):
 	rules={}
 	for ticket_rule in ticket_rules:
@@ -39,16 +39,24 @@ def create_validity_array(ticket_rules):
 			valid_values[i]=1
 	return valid_values
 
-def make_into_two_dimensions(tickets):
+#convert a one dimensional array into a two dimensional one, splitting at ,
+def make_into_two_dimensions(array):
 	two_dimensional=[[]]
-	for ticket in tickets:
-		two_dimensional=two_dimensional+[list(map(int,ticket.split(",")))]
+	for row in array:
+		two_dimensional=two_dimensional+[list(map(int,row.split(",")))]
 	return two_dimensional[1:]
 
 def field_assignment(valid_tickets, rules):
-	assingment={}
+	#initalizing the dictionary assignment
+	column_of_field={}
 	for key in rules:
-		assingment[key]=[]
+		column_of_field[key]=[]
+
+	"""
+	For every field, check if the values in the column fit in the ranges declared by the fields rule.
+	If any value falls into neither the first range nor the second range, the whole column doesn't fit the rule.
+	If every value in the column fits the rule, add the column to the list of possible columns for this field.
+	"""
 	for key in rules:
 		for j in range(len(valid_tickets[0])):
 			possible=True
@@ -56,26 +64,36 @@ def field_assignment(valid_tickets, rules):
 				if( (valid_tickets[i][j] not in range(rules[key][0], rules[key][1]+1)) and (valid_tickets[i][j] not in range(rules[key][2], rules[key][3]+1)) ):
 					possible=False
 			if(possible):
-				assingment[key]=assingment[key]+[j]
+				column_of_field[key]=column_of_field[key]+[j]
 
-	maxlen=0
+	"""
+	Reduce the lists so that every field has exactly one column, and every column has exactly one field.
+	If a field has exactly one column, that must be its column. Remove this column from every other field.
+	We need applied_reduction so that we can remember which fields we have already processed. Otherwise we would try to remove the same column over and over again.
+	Reduce the list until every field has exactly one column left
+	"""
+	max_columns_per_field=0
 	applied_reduction={}
-	for key in assingment:
-		maxlen=max(maxlen, len(assingment[key]))
+	for key in column_of_field:
+		max_columns_per_field=max(max_columns_per_field, len(column_of_field[key]))
 		applied_reduction[key]=False
-	while(maxlen!=1):
-		maxlen=1
-		for key in assingment:
-			if(len(assingment[key])==1 and applied_reduction[key]==False):
-				reduction_value=assingment[key][0]
+
+	while(max_columns_per_field!=1):
+		max_columns_per_field=1
+		#find a column not yet removed
+		for key in column_of_field:
+			if(len(column_of_field[key])==1 and applied_reduction[key]==False):
+				reduction_value=column_of_field[key][0]
 				applied_reduction[key]=True
 				break
-		for key in assingment:
-			if (len(assingment[key])!=1 and reduction_value in assingment[key]):
-				assingment[key].remove(reduction_value)
-		for key in assingment:
-			maxlen=max(maxlen, len(assingment[key]))
-	return assingment
+		#remove this column from every other field
+		for key in column_of_field:
+			if (len(column_of_field[key])!=1 and reduction_value in column_of_field[key]):
+				column_of_field[key].remove(reduction_value)
+		#find the current max_columns_per_field
+		for key in column_of_field:
+			max_columns_per_field=max(max_columns_per_field, len(column_of_field[key]))
+	return column_of_field
 
 
 def main():
@@ -96,7 +114,7 @@ def main():
 
 	#work out the field assignment
 	assignment=field_assignment(valid_tickets,rules)
-	
+
 	#calculate the product of all fields on my ticket related to departure
 	product=1
 	for key in assignment:
